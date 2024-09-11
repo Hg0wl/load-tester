@@ -1,6 +1,7 @@
 package org.example;
 
 import java.io.*;
+import java.util.List;
 import java.util.Properties;
 
 public class Main {
@@ -15,7 +16,18 @@ public class Main {
 
     // TODO: work with imported properties
     //String configProperties = mainProperties.getProperty("");
-    int numRuns = Integer.parseInt(mainProperties.getProperty("run_count"));
+    int numRuns;
+    int numThreads;
+    try {
+      numRuns = Integer.parseInt(mainProperties.getProperty("run_count").trim());
+      numThreads = Integer.parseInt(mainProperties.getProperty("thread_count").trim());
+    } catch (NumberFormatException e) {
+      numRuns = 1;
+      numThreads = 1;
+    }
+    String endpoint = mainProperties.getProperty("endpoint");
+    String[] headers = mainProperties.getProperty("header_list").split(",");
+    String[] formData = mainProperties.getProperty("form_post_data").split(",");
 
 
     HttpSender httpSender = new HttpSender();
