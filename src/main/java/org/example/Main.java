@@ -1,6 +1,7 @@
 package org.example;
 
 import java.io.*;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
@@ -28,7 +29,6 @@ public class Main {
     String endpoint = mainProperties.getProperty("endpoint");
     String[] headers = mainProperties.getProperty("header_list").split(",");
     String[] formData = mainProperties.getProperty("form_post_data").split(",");
-
 
     HttpSender httpSender = new HttpSender();
 

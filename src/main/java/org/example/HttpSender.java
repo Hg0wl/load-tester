@@ -4,19 +4,25 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URI;
-import java.net.http.HttpRequest;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Set;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class HttpSender {
   int numRuns;
   int numThreads;
   String endpoint;
   String[] headers;
-  Form form;
+  String[] form;
 
-  HttpSender(int numRuns, int numThreads, String endpoint, String[] headers, Form form) {
+  HttpSender(int numRuns, int numThreads, String endpoint, String[] headers, String[] form) {
     this.numRuns = numRuns;
     this.numThreads = numThreads;
     this.endpoint = endpoint;
@@ -25,7 +31,7 @@ public class HttpSender {
   }
   HttpSender() { }
 
-  public void simpleConnect() throws IOException {
+  public void testConnection() throws IOException {
     Socket socket = new Socket("localhost", 8080);
 
     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -45,10 +51,62 @@ public class HttpSender {
     for (int runs = 0; runs < numRuns; runs++) {
 
       for (int threads = 0; threads < numThreads; threads++) {
-        // Call a HTTPRequeset sendAsync helper function here numThreads times
+        // Call a HTTP Request sendAsync helper function numThreads times
+        try {
+          this.createRequest(this.form, runs, threads);
+        } catch (MalformedURLException e) {
+          System.err.println(e.getMessage());
+          continue;
+        }
       }
     }
   }
 
+  private void createRequest(String[] formDataMap, int runs, int threads) throws MalformedURLException {
+    MultipartBody.Builder requestBodyBuilder = new MultipartBody.Builder()
+      .setType(MultipartBody.FORM);
+
+    // Add all form fields to the post request
+    for (String data : formDataMap) {
+      /* addFormDataPart syntax:
+        requestBodyBuilder
+        .addFormDataPart("name", "chris")
+        .addFormDataPart("email", "test@test.com");
+       */
+      if (data.contains(":")) {
+        String fieldName = data.substring(0, data.indexOf(":"));
+        String valueName = data.substring(data.indexOf(":") + 1);
+        requestBodyBuilder.addFormDataPart(fieldName, valueName);
+      }
+    }
+    this.sendRequest(requestBodyBuilder.build(), runs, threads);
+  }
+
+  private void sendRequest(RequestBody requestBody, int runs, int threads) throws MalformedURLException {
+    OkHttpClient client = new OkHttpClient();
+    Request.Builder requestBuilder = new okhttp3.Request.Builder()
+      .url(URI.create(this.endpoint).toURL())
+      .post(requestBody);
+
+    // Add all HTTP Headers to the request
+    for (String header : headers) {
+      if (header.contains(":")) {
+        String headerName = header.substring(0, header.indexOf(":"));
+        String headerValue = header.substring(header.indexOf(":") + 1);
+        requestBuilder.addHeader(headerName, headerValue);
+      }
+    }
+    Request request = requestBuilder.build();
+
+    Response response;
+    try {
+      response = client.newCall(request).execute();
+    } catch (IOException e) {
+      response = new Response.Builder().code(400).build();
+    }
+    System.out.println("Run: " + runs + ", Thread: " + threads + "returned code: " + response.code());
+
+
+  }
 }
 
