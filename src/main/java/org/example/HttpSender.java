@@ -7,13 +7,15 @@ import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URI;
-import java.util.HashMap;
-import java.util.Set;
+import java.util.Objects;
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import org.jetbrains.annotations.NotNull;
 
 public class HttpSender {
   int numRuns;
@@ -51,12 +53,11 @@ public class HttpSender {
     for (int runs = 0; runs < numRuns; runs++) {
 
       for (int threads = 0; threads < numThreads; threads++) {
-        // Call a HTTP Request sendAsync helper function numThreads times
+        // Call an HTTP Request sendAsync helper function numThreads times
         try {
           this.createRequest(this.form, runs, threads);
         } catch (MalformedURLException e) {
           System.err.println(e.getMessage());
-          continue;
         }
       }
     }
@@ -67,17 +68,21 @@ public class HttpSender {
       .setType(MultipartBody.FORM);
 
     // Add all form fields to the post request
-    for (String data : formDataMap) {
+    if (form.length != 0) {
+      for (String data : formDataMap) {
       /* addFormDataPart syntax:
         requestBodyBuilder
         .addFormDataPart("name", "chris")
         .addFormDataPart("email", "test@test.com");
        */
-      if (data.contains(":")) {
-        String fieldName = data.substring(0, data.indexOf(":"));
-        String valueName = data.substring(data.indexOf(":") + 1);
-        requestBodyBuilder.addFormDataPart(fieldName, valueName);
+        if (data.contains(":")) {
+          String fieldName = data.substring(0, data.indexOf(":"));
+          String valueName = data.substring(data.indexOf(":") + 1);
+          requestBodyBuilder.addFormDataPart(fieldName, valueName);
+        }
       }
+    } else {
+      requestBodyBuilder.addFormDataPart("testField", "testValue");
     }
     this.sendRequest(requestBodyBuilder.build(), runs, threads);
   }
@@ -85,7 +90,7 @@ public class HttpSender {
   private void sendRequest(RequestBody requestBody, int runs, int threads) throws MalformedURLException {
     OkHttpClient client = new OkHttpClient();
     Request.Builder requestBuilder = new okhttp3.Request.Builder()
-      .url(URI.create(this.endpoint).toURL())
+      .url(this.endpoint)
       .post(requestBody);
 
     // Add all HTTP Headers to the request
@@ -96,15 +101,28 @@ public class HttpSender {
         requestBuilder.addHeader(headerName, headerValue);
       }
     }
-    Request request = requestBuilder.build();
 
-    Response response;
-    try {
-      response = client.newCall(request).execute();
-    } catch (IOException e) {
-      response = new Response.Builder().code(400).build();
-    }
-    System.out.println("Run: " + runs + ", Thread: " + threads + "returned code: " + response.code());
+    Request request = requestBuilder.build();
+    client.newCall(request).enqueue(new Callback() {
+      @Override
+      public void onFailure(@NotNull Call call, @NotNull IOException e) {
+        System.out.println(call.toString() + e);
+        call.cancel();
+      }
+
+      @Override
+      public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+        System.out.println("RUN: " + runs + ", THREADS: " + threads + ", CODE: " + response.code());
+        response.close();
+        call.cancel();
+
+
+
+      }
+    });
+
+    //System.out.println("Run: " + runs + ", Thread: " + threads + " returned code: " + response.code());
+    //System.out.println(response);
 
 
   }

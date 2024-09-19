@@ -1,8 +1,7 @@
 package org.example;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Properties;
 
 public class Main {
@@ -15,7 +14,6 @@ public class Main {
     mainProperties.load(file);
     file.close();
 
-    // TODO: work with imported properties
     //String configProperties = mainProperties.getProperty("");
     int numRuns;
     int numThreads;
@@ -30,7 +28,12 @@ public class Main {
     String[] headers = mainProperties.getProperty("header_list").split(",");
     String[] formData = mainProperties.getProperty("form_post_data").split(",");
 
-    HttpSender httpSender = new HttpSender();
+    // Accounting for the case where formData is a single empty string - throws errors in http data field
+    if (formData.length == 1 && formData[0].equals("")) {
+      formData = new String[0];
+    }
 
+    HttpSender httpSender = new HttpSender(numRuns, numThreads, endpoint, headers, formData);
+    httpSender.run();
   }
 }
