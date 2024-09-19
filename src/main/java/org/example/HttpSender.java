@@ -106,7 +106,7 @@ public class HttpSender {
     client.newCall(request).enqueue(new Callback() {
       @Override
       public void onFailure(@NotNull Call call, @NotNull IOException e) {
-        System.out.println(call.toString() + e);
+        System.out.println("RUN: " + runs + ", THREADS: " + threads + ", CODE: " + e.getMessage());
         call.cancel();
       }
 
